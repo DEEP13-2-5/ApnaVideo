@@ -12,7 +12,10 @@ import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
 import styles from  '../styles/videoComponent.module.css'
 
-const server_url = "http://localhost:8000";
+import server from '../environment';
+
+const server_url = server;
+
 const peerConfigConnections = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
