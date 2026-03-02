@@ -1,21 +1,34 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, IconButton, TextField } from "@mui/material";
 import RestoreIcon from "@mui/icons-material/Restore";
-import { AuthContext } from "../context/AuthContext";
 import withAuth from "../utils/withAuth";
 import "../App.css";
 
 function HomeComponent() {
   const navigate = useNavigate();
   const [meetingCode, setMeetingCode] = useState("");
-  const { addToUserHistory } = useContext(AuthContext);
+
+  const extractMeetingCode = (value) => {
+    const raw = value.trim();
+    if (!raw) return "";
+
+    try {
+      const parsedUrl = new URL(raw);
+      const segments = parsedUrl.pathname.split("/").filter(Boolean);
+      return segments[segments.length - 1] || "";
+    } catch (_) {
+      const segments = raw.split("/").filter(Boolean);
+      return segments[segments.length - 1] || raw;
+    }
+  };
 
   const handleJoinVideoCall = async () => {
-    if (meetingCode.trim()) {
+    const normalizedCode = extractMeetingCode(meetingCode);
+
+    if (normalizedCode) {
       try {
-        await addToUserHistory(meetingCode);
-        navigate(`/${meetingCode}`);
+        navigate(`/${normalizedCode}`);
       } catch (error) {
         console.error("Failed to join video call:", error);
       }

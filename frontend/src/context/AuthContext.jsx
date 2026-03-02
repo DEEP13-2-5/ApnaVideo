@@ -65,6 +65,10 @@ export const AuthProvider = ({ children }) => {
             return request.data
         } catch
          (err) {
+            if (err?.response?.status === httpStatus.UNAUTHORIZED) {
+                localStorage.removeItem("token");
+                router("/auth");
+            }
             throw err;
         }
     }
@@ -77,6 +81,10 @@ export const AuthProvider = ({ children }) => {
             });
             return request
         } catch (e) {
+            if (e?.response?.status === httpStatus.UNAUTHORIZED) {
+                localStorage.removeItem("token");
+                router("/auth");
+            }
             throw e;
         }
     }

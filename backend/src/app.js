@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import userRoute from "./routes/users.routes.js";
 import connectToSocket from "./controllers/socketManager.js"; // Ensure the filename matches exactly
+import { meeting } from "./models/meeting.model.js";
 
 const app = express();
 const server = createServer(app);
@@ -23,6 +24,7 @@ const start = async () => {
             "mongodb+srv://harshabodani461:T4GMSXIZV1N4ckqL@videocluster.b34yc.mongodb.net/?retryWrites=true&w=majority&appName=VideoCluster"
         );
         console.log(`MongoDB connected: ${connectionDb.connection.host}`);
+        await meeting.syncIndexes();
 
         server.listen(app.get("port"), () => {
             console.log(`LISTENING ON PORT ${app.get("port")}`);

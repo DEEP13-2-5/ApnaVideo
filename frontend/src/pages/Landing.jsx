@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import "../App.css"
 import { Link, useNavigate } from 'react-router-dom'
 export default function LandingPage() {
     const router = useNavigate();
+
+    useEffect(() => {
+        if (localStorage.getItem("token")) {
+            router("/home");
+        }
+    }, [router]);
+
+    const joinAsGuest = () => {
+        const meetingCode = Math.random().toString(36).slice(2, 8);
+        router(`/${meetingCode}`);
+    };
+
     return (
         <div className='landingPageContainer'>
             <nav>
@@ -11,7 +23,7 @@ export default function LandingPage() {
                 </div>
                 <div className='navlist'>
                     <p onClick={() => {
-                        router("/aljk23")
+                        joinAsGuest()
                     }}>Join as Guest</p>
                     <p onClick={() => {
                         router("/auth")

@@ -11,10 +11,12 @@ import Typography from '@mui/material/Typography';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { AuthContext } from '../context/AuthContext';
 import { Snackbar } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const defaultTheme = createTheme();
 
 export default function Authentication() {
+    const navigate = useNavigate();
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [name, setName] = React.useState('');
@@ -138,6 +140,14 @@ export default function Authentication() {
                                 onClick={handleAuth}
                             >
                                 {formState === 0 ? 'login' : 'register'}
+                            </Button>
+                            <Button
+                                type="button"
+                                fullWidth
+                                variant="text"
+                                onClick={() => navigate('/')}
+                            >
+                                Back to Landing Page
                             </Button>
                         </Box>
                     </Box>

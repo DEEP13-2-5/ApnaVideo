@@ -1,31 +1,37 @@
-import React from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Card from '@mui/material/Card';
-import Box from '@mui/material/Box';
-import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import HomeIcon from '@mui/icons-material/Home';
 import { IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import withAuth from '../utils/withAuth';
 
-const dummyData = [
-    {
-        meetingCode: 'A1B2C3',
-        date: '2023-08-25T14:30:00Z'
-    },
-    {
-        meetingCode: 'D4E5F6',
-        date: '2023-09-10T09:00:00Z'
-    },
-    {
-        meetingCode: 'G7H8I9',
-        date: '2023-10-05T18:45:00Z'
-    }
-];
-
-export default function History() {
+function History() {
     const routeTo = useNavigate();
+    const { getUserHistory } = useContext(AuthContext);
+    const [meetings, setMeetings] = useState([]);
+    const [loadError, setLoadError] = useState('');
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const data = await getUserHistory();
+                if (Array.isArray(data)) {
+                    setMeetings(data);
+                    setLoadError('');
+                } else {
+                    setLoadError(data?.message || 'Unable to load meeting history.');
+                }
+            } catch (error) {
+                console.error("Failed to load history:", error);
+                setLoadError(error?.response?.data?.message || 'Failed to load history. Please try again.');
+            }
+        };
+
+        fetchHistory();
+    }, [getUserHistory]);
 
     let formatDate = (dateString) => {
         const date = new Date(dateString);
@@ -41,12 +47,12 @@ export default function History() {
             <IconButton onClick={() => routeTo('/home')}>
                 <HomeIcon />
             </IconButton>
-            {dummyData.length !== 0 ? (
-                dummyData.map((e, i) => (
+            {meetings.length !== 0 ? (
+                meetings.map((e, i) => (
                     <Card key={i} variant="outlined">
                         <CardContent>
                             <Typography sx={{ fontSize: 14 }} color="text.secondary" gutterBottom>
-                                Code: {e.meetingCode}
+                                Code: {e.meetingCode || e.meetingcode}
                             </Typography>
                             <Typography sx={{ mb: 1.5 }} color="text.secondary">
                                 Date: {formatDate(e.date)}
@@ -55,8 +61,12 @@ export default function History() {
                     </Card>
                 ))
             ) : (
-                <></>
+                <Typography sx={{ m: 2 }} color="text.secondary">
+                    {loadError || 'No meeting history yet.'}
+                </Typography>
             )}
         </div>
     );
 }
+
+export default withAuth(History);

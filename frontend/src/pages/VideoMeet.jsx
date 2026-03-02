@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import io from "socket.io-client";
 import { Badge, IconButton, Modal, TextField } from '@mui/material';
 import { Button } from '@mui/material';
@@ -13,6 +13,8 @@ import ChatIcon from '@mui/icons-material/Chat'
 import styles from  '../styles/videoComponent.module.css'
 
 import server from '../environment';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 const server_url = server;
 
@@ -21,6 +23,10 @@ const peerConfigConnections = {
 };
 
 function VideoMeet() {
+  const navigate = useNavigate();
+  const { url: meetingCodeFromUrl, "*": wildcardPath } = useParams();
+  const { addToUserHistory } = useContext(AuthContext);
+  const hasSavedHistory = useRef(false);
   const [pinnedUser, setPinnedUser] = useState(null);
   const socketRef = useRef(null);
   const socketIdRef = useRef(null);
@@ -40,6 +46,57 @@ function VideoMeet() {
   const [username, setUsername] = useState("");
   const connections = useRef({});
 
+  const parseMeetingCode = (primaryPart, extraPart) => {
+    const combined = [primaryPart, extraPart].filter(Boolean).join("/");
+    const decoded = decodeURIComponent(combined || "").trim();
+
+    if (!decoded) {
+      return "";
+    }
+
+    try {
+      const parsedUrl = new URL(decoded);
+      const pieces = parsedUrl.pathname.split("/").filter(Boolean);
+      return pieces[pieces.length - 1] || "";
+    } catch (_) {
+      const pieces = decoded.split("/").filter(Boolean);
+      return pieces[pieces.length - 1] || "";
+    }
+  };
+
+  const meetingCode = parseMeetingCode(meetingCodeFromUrl, wildcardPath);
+
+  const cleanupCallSession = () => {
+    try {
+      if (window.localStream) {
+        window.localStream.getTracks().forEach((track) => track.stop());
+      }
+    } catch (error) {
+      console.error("Error stopping local tracks:", error);
+    }
+
+    try {
+      Object.values(connections.current).forEach((peerConnection) => {
+        if (peerConnection && typeof peerConnection.close === "function") {
+          peerConnection.close();
+        }
+      });
+      connections.current = {};
+    } catch (error) {
+      console.error("Error closing peer connections:", error);
+    }
+
+    try {
+      if (socketRef.current) {
+        socketRef.current.off("signal", gotMessageFromServer);
+        socketRef.current.off("chat-message", addMessage);
+        socketRef.current.disconnect();
+      }
+    } catch (error) {
+      console.error("Error disconnecting socket:", error);
+    }
+  };
+
   const getPermission = async () => {
     try {
       const userMediaStream = await navigator.mediaDevices.getUserMedia({
@@ -58,6 +115,30 @@ function VideoMeet() {
 
   useEffect(() => {
     getPermission();
+  }, []);
+
+  useEffect(() => {
+    const saveMeetingToHistory = async () => {
+      const token = localStorage.getItem("token");
+      if (!token || !meetingCode || hasSavedHistory.current) {
+        return;
+      }
+
+      try {
+        await addToUserHistory(meetingCode);
+        hasSavedHistory.current = true;
+      } catch (error) {
+        console.error("Failed to save meeting history:", error);
+      }
+    };
+
+    saveMeetingToHistory();
+  }, [meetingCode, addToUserHistory]);
+
+  useEffect(() => {
+    return () => {
+      cleanupCallSession();
+    };
   }, []);
 
   const getUserMediaSuccess = (stream) => {
@@ -154,7 +235,7 @@ function VideoMeet() {
     socketRef.current.on("signal", gotMessageFromServer);
 
     socketRef.current.on("connect", () => {
-        socketRef.current.emit("join-call", window.location.href);
+      socketRef.current.emit("join-call", meetingCode);
         socketIdRef.current = socketRef.current.id;
 
         socketRef.current.on("chat-message", addMessage);
@@ -250,6 +331,11 @@ let black = ({ width = 640, height = 480 } = {}) => {
  
 
   const connect = () => {
+    if (!meetingCode) {
+      alert("Invalid meeting link or code.");
+      navigate("/");
+      return;
+    }
     setAskForUsername(false);
     getUserMedia().then(connectToSocketServer);
   };
@@ -359,7 +445,9 @@ const handlePin = (video) => {
 };
 
   let handleEnd =() =>{
-    window.location.href = 'http://localhost:5173/home'
+    cleanupCallSession();
+    const isLoggedIn = Boolean(localStorage.getItem("token"));
+    navigate(isLoggedIn ? "/home" : "/");
   }
 
 let handleMessage = (e) => {
